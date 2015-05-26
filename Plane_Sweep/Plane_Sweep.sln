@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plane_Sweep", "Plane_Sweep\Plane_Sweep.vcxproj", "{D38BFA8F-1953-4906-838C-AB669FBB4F37}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D38BFA8F-1953-4906-838C-AB669FBB4F37}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D38BFA8F-1953-4906-838C-AB669FBB4F37}.Debug|Win32.Build.0 = Debug|Win32
+		{D38BFA8F-1953-4906-838C-AB669FBB4F37}.Release|Win32.ActiveCfg = Release|Win32
+		{D38BFA8F-1953-4906-838C-AB669FBB4F37}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
