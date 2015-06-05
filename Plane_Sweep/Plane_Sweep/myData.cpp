@@ -4,6 +4,23 @@
 #include <cmath>
 #include "SharedValue.h"
 
+
+void printm(CvMat *m)
+{
+	int i, j;
+	double a;
+	for( i = 0; i < m->rows; i++ )
+	{
+		for( j = 0; j < m->cols; j++ )
+		{
+			a=CV_MAT_ELEM(*m,double,i,j);
+			cout<<a<<" ";
+		}
+		cout << endl;
+	}
+	cout <<endl;
+}
+
 myData::myData(int n)
 {
 	p_width=640;        //设定图片高宽
@@ -13,6 +30,8 @@ myData::myData(int n)
 	r_inv = cvCreateMat(3,3,CV_64FC1);
 	z_near=z_far=0;
 	cam_num = n;
+
+
 }
 
 
@@ -177,6 +196,33 @@ void myData::compute_true_RTs()
 	ref_RT[10]=-1;
 }
 
+
+void myData::compute_H(double depth,CvMat *H[4])
+{
+
+	CvMat *temp = cvCreateMat(4,4,CV_64FC1);  //计算H的中间矩阵
+
+	double temp_value[]={480,0,0,-319.5*depth,
+		0,-480,0,-239.5*depth,
+		0,0,-1,0,
+		0,0,0,-depth};
+
+	cvInitMatHeader(temp,4,4,CV_64FC1,temp_value);
+
+	CvMat *temp_inv = cvCreateMat(4,4,CV_64FC1); 
+	cvInvert(temp, temp_inv, CV_SVD);
+
+
+	for (int i=0;i<4;i++)
+	{
+		H[i]=cvCreateMat(3,4,CV_64FC1);
+		CvMat *tar_rt=cvCreateMat(3,4,CV_64FC1);
+		cvInitMatHeader(tar_rt,3,4,CV_64FC1,tar_RTs[i]);
+		cvMatMulAdd(tar_rt,temp_inv,0,H[i]);
+	}
+
+}
+
 void myData::compute_depthmap()
 {
 	Mat img1_tar;
@@ -235,11 +281,11 @@ void myData::compute_depthmap()
 		img_ref=imread("F:/三维重建/kermit/data/000"+n_s+".jpg");
 	}
 
-	Mat rec_ref(5,5,CV_8U);
-	Mat rec_tar1(5,5,CV_8U);
-	Mat rec_tar2(5,5,CV_8U);
-	Mat rec_tar3(5,5,CV_8U);
-	Mat rec_tar4(5,5,CV_8U);
+	Mat rec_ref(5,5,CV_8UC3);
+	Mat rec_tar1(5,5,CV_8UC3);
+	Mat rec_tar2(5,5,CV_8UC3);
+	Mat rec_tar3(5,5,CV_8UC3);
+	Mat rec_tar4(5,5,CV_8UC3);
 
 	CvMat *comp2to3 = cvCreateMat( 3, 3, CV_64FC1); //根据二维点位置以及深度计算三维点位置
 	CvMat *comp2to3_inv = cvCreateMat( 3, 3, CV_64FC1); 
@@ -249,14 +295,27 @@ void myData::compute_depthmap()
 	CvMat *two_d_point = cvCreateMat(3,1,CV_64FC1);
 
 
+	CvMat *pixel_ref = cvCreateMat( 4, 1, CV_64FC1);  //用于通过单应计算ref对应tar的像素
+	CvMat *pixel_tar = cvCreateMat( 3, 1, CV_64FC1);
+
+
 
 	//从近平面扫描到远平面
 	for (double z=z_near;z>z_far;z=z-0.01)
 	{
+		CvMat *H[4];
+		compute_H(z,H);
+
+		for (int i=0;i<4;i++)
+		{
+			printm(H[i]);
+		}
+
 		for (int x=0;x<p_width;x++)
 		{
 			for (int y=0;y<p_height;y++)
 			{
+
 				double score[4];          //NCC匹配分数
 				for (int i=0 ; i<4 ; i++)
 				{
@@ -294,55 +353,141 @@ void myData::compute_depthmap()
 				x_3d=x_3d/scale;
 				y_3d=y_3d/scale;
 
-				
+
+
 
 				for (int i=0 ; i<4; i++)
 				{
-					cvInitMatHeader(rt,3,4,CV_64FC1,tar_RTs[i-1]);
 
-					double b[] = {x_3d, y_3d, z, 1};
-					cvInitMatHeader( three_d_point, 4, 1, CV_64FC1, b);
+					//cvInitMatHeader(rt,3,4,CV_64FC1,tar_RTs[i]);
+					//
+					//double b[] = {x_3d, y_3d, z, 1};
+					//cvInitMatHeader( three_d_point, 4, 1, CV_64FC1, b);
 
-					cvMatMulAdd( rt, three_d_point, 0, two_d_point);
-					double x_2d,y_2d,z_2d;
-					z_2d = CV_MAT_ELEM(* two_d_point,double,2,0);
-					x_2d = CV_MAT_ELEM(* two_d_point,double,0,0);
-					y_2d = CV_MAT_ELEM(* two_d_point,double,1,0);
-					//PrintMat(two_d_point);
+					//cvMatMulAdd( rt, three_d_point, 0, two_d_point);
+					//double x_2d,y_2d,z_2d;
+					//z_2d = CV_MAT_ELEM(* two_d_point,double,2,0);
+					//x_2d = CV_MAT_ELEM(* two_d_point,double,0,0);
+					//y_2d = CV_MAT_ELEM(* two_d_point,double,1,0);
+					////PrintMat(two_d_point);
 
 
-					x_2d = x_2d/z_2d;
-					y_2d = y_2d/z_2d;
-					z_2d = 1;
+					//x_2d = x_2d/z_2d;
+					//y_2d = y_2d/z_2d;
+					//z_2d = 1;
 
-					Point2f p_2d;
-					p_2d.x = x_2d;
-					p_2d.y = y_2d;
+					//Point2f p_2d;
+					//p_2d.x = x_2d;
+					//p_2d.y = y_2d;
 
-					if (x_2d<p_width && x_2d>0 && y_2d<p_height && y_2d>0)
+					//if (x_2d<p_width && x_2d>0 && y_2d<p_height && y_2d>0)
+					//{
+					//	switch(i)
+					//	{
+					//	case 0:
+					//		getRectSubPix( img1_tar, Size(5,5), p_2d,rec_tar1);
+					//		score[0]=-1;
+					//		break;
+					//	case 1:
+					//		getRectSubPix( img2_tar, Size(5,5), p_2d,rec_tar2 );
+					//		score[1]=-1;
+					//		break;
+					//	case 2:
+					//		getRectSubPix( img3_tar, Size(5,5), p_2d,rec_tar3 );
+					//		score[2]=-1;
+					//		break;
+					//	case 3:
+					//		getRectSubPix( img4_tar, Size(5,5), p_2d,rec_tar4 );
+					//		score[3]=-1;
+					//		break;
+					//	default:
+					//		break;
+					//	}
+
+					//}
+
+
+
+					for (int b=0;b<5;b++)
 					{
-						switch(i)
+						for (int a=0;a<5;a++)
 						{
-						case 0:
-							getRectSubPix( img1_tar, Size(5,5), p_2d,rec_tar1);
-							score[0]=-1;
-							break;
-						case 1:
-							getRectSubPix( img2_tar, Size(5,5), p_2d,rec_tar2 );
-							score[1]=-1;
-							break;
-						case 2:
-							getRectSubPix( img3_tar, Size(5,5), p_2d,rec_tar3 );
-							score[2]=-1;
-							break;
-						case 3:
-							getRectSubPix( img4_tar, Size(5,5), p_2d,rec_tar4 );
-							score[3]=-1;
-							break;
-						default:
-							break;
-						}
+							double pixel_ref_v[]={x+a-2,y+b-2,1,1};
+							cvInitMatHeader(pixel_ref,4,1,CV_64FC1,pixel_ref_v);
+							cvMatMulAdd(H[i],pixel_ref,0,pixel_tar);
 
+							double pixel_tar_x,pixel_tar_y,pixel_tar_scale;
+							pixel_tar_x=CV_MAT_ELEM(*pixel_tar,double,0,0);
+							pixel_tar_y=CV_MAT_ELEM(*pixel_tar,double,1,0);
+							pixel_tar_scale=CV_MAT_ELEM(*pixel_tar,double,2,0);
+
+							pixel_tar_x=pixel_tar_x/pixel_tar_scale;
+							pixel_tar_y=pixel_tar_y/pixel_tar_scale;
+
+
+							if (pixel_tar_x<640 && pixel_tar_x>=0 && pixel_tar_y<480 && pixel_tar_y>=0)
+							{
+								switch(i)
+								{
+								case 0:
+									rec_tar1.at<Vec3b>(b,a)[0]=img1_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[0];
+									rec_tar1.at<Vec3b>(b,a)[1]=img1_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[1];
+									rec_tar1.at<Vec3b>(b,a)[2]=img1_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[2];
+									score[0]=-1;
+									break;
+								case 1:
+									rec_tar2.at<Vec3b>(b,a)[0]=img2_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[0];
+									rec_tar2.at<Vec3b>(b,a)[1]=img2_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[1];
+									rec_tar2.at<Vec3b>(b,a)[2]=img2_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[2];
+									score[1]=-1;
+									break;
+								case 2:
+									rec_tar3.at<Vec3b>(b,a)[0]=img3_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[0];
+									rec_tar3.at<Vec3b>(b,a)[1]=img3_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[1];
+									rec_tar3.at<Vec3b>(b,a)[2]=img3_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[2];
+									score[2]=-1;
+									break;
+								case 3:
+									rec_tar4.at<Vec3b>(b,a)[0]=img4_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[0];
+									rec_tar4.at<Vec3b>(b,a)[1]=img4_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[1];
+									rec_tar4.at<Vec3b>(b,a)[2]=img4_tar.at<Vec3b>(pixel_tar_y,pixel_tar_x)[2];
+									score[3]=-1;
+									break;
+								default:
+									break;
+
+								}
+							}
+							else
+							{
+								switch(i)
+								{
+								case 0:
+									rec_tar1.at<Vec3b>(b,a)[0]=0;
+									rec_tar1.at<Vec3b>(b,a)[1]=0;
+									rec_tar1.at<Vec3b>(b,a)[2]=0;
+									break;
+								case 1:
+									rec_tar2.at<Vec3b>(b,a)[0]=0;
+									rec_tar2.at<Vec3b>(b,a)[1]=0;
+									rec_tar2.at<Vec3b>(b,a)[2]=0;
+									break;
+								case 2:
+									rec_tar3.at<Vec3b>(b,a)[0]=0;
+									rec_tar3.at<Vec3b>(b,a)[1]=0;
+									rec_tar3.at<Vec3b>(b,a)[2]=0;
+									break;
+								case 3:
+									rec_tar4.at<Vec3b>(b,a)[0]=0;
+									rec_tar4.at<Vec3b>(b,a)[1]=0;
+									rec_tar4.at<Vec3b>(b,a)[2]=0;
+									break;
+								default:
+									break;
+
+								}
+							}
+						}
 					}
 
 
@@ -416,6 +561,7 @@ void myData::compute_depthmap()
 void myData::generate_depthmap()
 {
 	IplImage* img =  cvLoadImage("1.jpg",0);
+
 	CvScalar p;
 	//cvFlip(img);
 	for(int i=0;i<img->width;i++)

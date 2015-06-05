@@ -15,7 +15,7 @@ int main()
 	depth_map2.InitVC_Points();
 	depth_map2.compute_true_RTs();
 	depth_map2.compute_depthmap();
-	depth_map2.generate_depthmap();
+	//depth_map2.generate_depthmap();
 	depth_map2.generate_pointCloud();
 
 }

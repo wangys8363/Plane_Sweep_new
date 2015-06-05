@@ -34,6 +34,9 @@ public:
 	CvMat *t;  // 当前参考相机的光心
 	CvMat *r;  // 当前参考相机的旋转R
 	CvMat *r_inv; //r逆
+
+
+	
 	vector <vector <VC_Point>> VC_Points; //深度信息
 
 	
@@ -47,6 +50,8 @@ public:
 
 	void InitVC_Points();
 	void compute_true_RTs();
+
+	void compute_H(double depth,CvMat *H[4]);
 
 	void compute_depthmap();
 
